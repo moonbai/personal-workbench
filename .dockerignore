@@ -2,11 +2,12 @@
 .gitignore
 .github
 node_modules
+server/node_modules
+server/data
 *.md
 !README.md
 docker-compose.yml
 .env
 .env.*
-Dockerfile
-.dockerignore
 LICENSE
+deploy.sh

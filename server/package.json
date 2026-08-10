@@ -1,0 +1,16 @@
+{
+  "name": "personal-workbench-server",
+  "version": "1.0.0",
+  "description": "个人工作台后端 - SQLite 数据存储",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1"
+  }
+}

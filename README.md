@@ -1,6 +1,6 @@
 # 个人工作台 · Personal Workbench
 
-> 一个纯前端的个人每日工作台 —— 每日计划、习惯打卡、记账本、长期目标、心情日记，全部集中在同一个页面里。无需后端，数据存储在浏览器本地。
+> 个人每日工作台 —— 每日计划、习惯打卡、记账本、长期目标、心情日记，全部集中在同一个页面里。前后端分离，数据持久化存储在 SQLite 数据库中。
 
 ## 功能模块
 
@@ -16,28 +16,24 @@
 
 ## 特性
 
-- **零依赖** — 纯 HTML/CSS/JS，无构建步骤，无后端
-- **数据本地化** — 所有数据存储在浏览器 `localStorage` 中
+- **前后端分离** — 前端纯 HTML/CSS/JS，后端 Node.js + Express
+- **数据持久化** — 所有数据存储在 SQLite 数据库中，不依赖浏览器缓存
+- **头像上传** — 支持头像文件上传，存储在服务器端
 - **一键换肤** — 通过 CSS 变量实现整站主题切换
-- **响应式布局** — 桌面端侧栏导航 + 多列网格
 - **番茄钟** — 内置专注计时器
-- **Docker 部署** — 一条命令启动
+- **Docker 部署** — 一条命令启动前后端服务
 
 ## 快速开始
 
-### 方式一：直接打开
-
-用浏览器直接打开 `workbench-desktop.html` 即可使用。
-
-### 方式二：Docker 部署（推荐）
+### Docker 部署（推荐）
 
 ```bash
 # 克隆仓库
-git clone https://github.com/你的用户名/personal-workbench.git
+git clone https://github.com/moonbai/personal-workbench.git
 cd personal-workbench
 
-# 构建并启动
-docker compose up -d
+# 构建并启动（前端 + 后端）
+docker compose up -d --build
 
 # 访问
 # 浏览器打开 http://localhost:8080
@@ -50,18 +46,72 @@ docker compose up -d
 PORT=3000 docker compose up -d
 ```
 
-### 方式三：Docker 构建
+### 本地开发
 
 ```bash
-docker build -t personal-workbench .
-docker run -d -p 8080:80 --name workbench personal-workbench
+# 1. 启动后端
+cd server
+npm install
+npm start
+
+# 2. 启动前端（另开终端）
+python3 -m http.server 8080
+
+# 3. 访问 http://localhost:8080
 ```
+
+## 架构说明
+
+```
+浏览器 ──→ Nginx (:8080)
+              ├── 静态文件 (HTML/CSS/JS/图片)
+              └── /api/* 反向代理 ──→ Node.js Express (:3001)
+                                        └── SQLite 数据库
+```
+
+| 组件 | 技术 | 说明 |
+|---|---|---|
+| 前端 | HTML / CSS / JS | 纯原生，无框架 |
+| 后端 | Node.js + Express | REST API |
+| 数据库 | SQLite (better-sqlite3) | 轻量级文件数据库 |
+| 代理 | Nginx | 静态文件服务 + API 反向代理 |
+| 容器 | Docker Compose | 前后端双服务编排 |
+
+### API 接口
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/data` | 获取完整工作台数据 |
+| PUT | `/api/data` | 保存工作台数据 |
+| POST | `/api/avatar` | 上传头像文件 |
+| GET | `/api/health` | 健康检查 |
+| GET | `/uploads/:file` | 访问上传的头像文件 |
 
 ## 数据说明
 
-- 所有数据存储在**当前设备的当前浏览器**中
-- 换电脑、换浏览器或清除浏览记录后数据会丢失
-- 建议定期导出重要数据
+- 所有数据存储在 **SQLite 数据库**中，持久化保存在服务器端
+- 数据通过 Docker Volume (`workbench-data`) 持久化，容器重启不丢失
+- 头像文件上传后存储在服务器端 `/app/data/uploads/` 目录
+
+## 项目结构
+
+```
+personal-workbench/
+├── workbench-desktop.html   # 前端主应用
+├── assets/
+│   └── greet-banner.jpg     # 首页 Hero 背景图
+├── server/                  # 后端服务
+│   ├── index.js             # Express API 服务
+│   ├── package.json         # 依赖配置
+│   └── Dockerfile           # 后端 Docker 构建
+├── Dockerfile               # 前端 Docker 构建
+├── docker-compose.yml       # Docker Compose 编排
+├── nginx.conf               # Nginx 配置（含 API 反向代理）
+├── .dockerignore
+├── .gitignore
+├── LICENSE
+└── README.md
+```
 
 ## 自定义配置
 
@@ -69,7 +119,6 @@ docker run -d -p 8080:80 --name workbench personal-workbench
 
 ```javascript
 const CONFIG = {
-  storageKey: "workbench-desktop-v1",  // 修改 key 可重置数据
   owner: "我的工作台",
   slogan: "Personal Workbench",
   modules: [
@@ -90,28 +139,6 @@ const CONFIG = {
   /* ... */
 }
 ```
-
-## 项目结构
-
-```
-personal-workbench/
-├── workbench-desktop.html   # 主应用（桌面版）
-├── assets/
-│   └── greet-banner.jpg     # 首页 Hero 背景图
-├── Dockerfile               # Docker 构建文件
-├── docker-compose.yml       # Docker Compose 编排
-├── nginx.conf               # Nginx 配置
-├── .dockerignore
-├── .gitignore
-├── LICENSE
-└── README.md
-```
-
-## 技术栈
-
-- **前端**：原生 HTML / CSS / JavaScript（无框架）
-- **部署**：Nginx 1.27 Alpine
-- **容器化**：Docker / Docker Compose
 
 ## License
 

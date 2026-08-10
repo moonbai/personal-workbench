@@ -663,19 +663,63 @@ function avgProgress(list){
 const modOf = k => CONFIG.modules.find(m=>m.key===k);
 const $ = s => document.querySelector(s);
 
+/* ============================================================
+   API STORE — 数据存储在后端 SQLite，不再用 localStorage
+   ============================================================ */
+let API_BASE = '';  // Docker/nginx 下走相对路径，本地开发自动切换到 3001
+
+async function detectApiBase(){
+  // 先试相对路径（Docker nginx 代理）
+  try {
+    const r = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
+    if(r.ok) return '';
+  } catch(e){}
+  // 回退到本地 3001 端口（开发模式）
+  try {
+    const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1500) });
+    if(r.ok) return 'http://localhost:3001';
+  } catch(e){}
+  return '';
+}
+
 const store = {
-  load(){
-    const raw = localStorage.getItem(CONFIG.storageKey);
-    if(raw){ try { return JSON.parse(raw); } catch(e){} }
+  async load(){
+    API_BASE = await detectApiBase();
+    try {
+      const res = await fetch(`${API_BASE}/api/data`);
+      const json = await res.json();
+      if(json.ok && json.data && Object.keys(json.data).length > 0){
+        return json.data;
+      }
+    } catch(e){ console.warn('[Store] 从后端加载失败，使用种子数据', e); }
     const d={}; CONFIG.modules.forEach(m=>d[m.key]=structuredClone(m.seed||[])); return d;
   },
-  save(){ localStorage.setItem(CONFIG.storageKey, JSON.stringify(data)); },
+  _timer: null,
+  save(){
+    if(this._timer) clearTimeout(this._timer);
+    this._timer = setTimeout(() => {
+      fetch(`${API_BASE}/api/data`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      }).catch(e => console.warn('[Store] 保存失败', e));
+    }, 300);
+  },
+  saveNow(){
+    if(this._timer){ clearTimeout(this._timer); this._timer = null; }
+    return fetch(`${API_BASE}/api/data`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    }).catch(e => console.warn('[Store] 保存失败', e));
+  },
 };
-let data = store.load();
+let data = {};
 let view = "home";
 let searchQ = "";
-let pomo = { running:false, remain:25*60, total:25*60 };   // 番茄钟状态（内存态，跨渲染保留）
-let clockTimer = null;                                       // 全局秒级心跳（时钟 + 番茄钟）
+let pomo = { running:false, remain:25*60, total:25*60 };
+let clockTimer = null;
+let _booted = false;
 function persist(){ store.save(); render(); }
 function pad2(n){ return String(n).padStart(2,"0"); }
 
@@ -701,7 +745,7 @@ function pomoUpdate(){
   const b=$("#pomo-toggle"); if(b) b.textContent=pomo.running?"暂停":"开始";
 }
 function completePomo(){ pomo.running=false; pomo.remain=pomo.total;
-  data.__pomo=data.__pomo||{count:0,min:0}; data.__pomo.count++; data.__pomo.min+=Math.round(pomo.total/60); store.save();
+  data.__pomo=data.__pomo||{count:0,min:0}; data.__pomo.count++; data.__pomo.min+=Math.round(pomo.total/60); store.save(); render();
   const c=$("#pomo-count"); if(c) c.textContent=data.__pomo.count;
   const mn=$("#pomo-min"); if(mn) mn.textContent=data.__pomo.min;
 }
@@ -1307,12 +1351,20 @@ function renderNavActive(){ $("#nav").querySelectorAll(".navi").forEach(el=>el.c
 $("#avaCam").innerHTML = icon("camera",18);
 if(data.__avatar) $("#avaImg").src = data.__avatar;
 $("#ava").onclick = () => $("#avatarInput").click();
-$("#avatarInput").onchange = e => {
+$("#avatarInput").onchange = async e => {
   const f = e.target.files && e.target.files[0];
   if(!f) return;
-  const reader = new FileReader();
-  reader.onload = () => { data.__avatar = reader.result; $("#avaImg").src = reader.result; store.save(); };
-  reader.readAsDataURL(f);
+  try {
+    const fd = new FormData();
+    fd.append('avatar', f);
+    const res = await fetch(`${API_BASE}/api/avatar`, { method: 'POST', body: fd });
+    const json = await res.json();
+    if(json.ok){
+      data.__avatar = API_BASE + json.url;
+      $("#avaImg").src = data.__avatar;
+      store.save();
+    }
+  } catch(err){ console.warn('[Avatar] 上传失败', err); }
   e.target.value = "";
 };
 
@@ -1321,7 +1373,15 @@ function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 function attr(s){ return esc(s).replace(/"/g,'&quot;'); }
 
 buildNav();
-render();
+
+/* ---------- 异步初始化：从后端加载数据后再渲染 ---------- */
+(async () => {
+  data = await store.load();
+  _booted = true;
+  if(data.__avatar) $("#avaImg").src = data.__avatar;
+  render();
+  startClock();
+})();
 </script>
 </body>
 </html>

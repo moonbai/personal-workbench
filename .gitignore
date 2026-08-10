@@ -20,3 +20,7 @@ docker-compose.override.yml
 # 日志
 *.log
 npm-debug.log*
+server/node_modules/
+server/data/
+.trae-html-share-packages/
+.screenshots/
