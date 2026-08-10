@@ -1,13 +1,17 @@
 # 个人工作台 · Personal Workbench
 
-> 个人每日工作台 + 导航站 —— 集每日计划、习惯打卡、记账本、长期目标、心情日记、搜索聚合、快捷导航于一体。前后端分离架构，数据持久化存储在 SQLite 数据库中，支持 Docker 一键部署。
+> 个人每日工作台 + 导航站 —— 集每日计划、习惯打卡、记账本、长期目标、心情日记、搜索聚合、快捷导航、命令面板、天气、倒计时于一体。前后端分离架构，数据持久化存储在 SQLite 数据库中，支持 Docker 一键部署。
 
 ## 功能模块
 
 | 模块 | 说明 |
 |---|---|
+| ⌨️ 命令面板 | `Ctrl+K` 全局快速搜索，支持模块跳转、导航搜索、网址直达 |
 | 🔍 搜索聚合 | 多搜索引擎一键切换（Google / 百度 / Bing / GitHub / 知乎 / B站） |
-| 🔗 快捷导航 | 分组导航站（常用工具 / 开发资源 / 社交媒体 / 效率工具） |
+| 📜 搜索历史 | 自动记录最近 8 条搜索，一键复用 |
+| 🔗 快捷导航 | 分组导航站，支持动态增删书签 + 自动 Favicon |
+| 🌤️ 天气小组件 | 自动获取当前位置天气信息（温度/湿度/风速） |
+| ⏰ 倒计时 | 重要事件倒计时管理，支持添加/删除 |
 | 📋 今日计划 | 任务清单与优先级追踪（P0/P1/P2），支持置顶、备注 |
 | 🌿 习惯打卡 | 每日习惯打卡，自动统计连续天数，每日自动重置 |
 | 📖 阅读打卡 | 书籍阅读进度追踪，支持摘录与想法记录 |
@@ -15,20 +19,38 @@
 | 💰 记账本 | 收入/支出记录，分类统计与支出占比图表 |
 | ✏️ 心情日记 | 文字记录与心情标签 |
 | 🔥 今日热点 | 内容收藏与稍后阅读 |
+| 💾 数据管理 | 一键导出/导入 JSON 数据备份 |
 
 ## 核心特性
 
+- **命令面板 (Ctrl+K)** — 类似 VS Code / Raycast 体验，模糊搜索模块、导航、引擎，输入网址直接打开
 - **前后端分离** — 前端纯 HTML/CSS/JS，后端 Node.js + Express
 - **数据持久化** — 所有数据存储在 SQLite 数据库中，不依赖浏览器缓存
-- **搜索聚合** — 首页搜索栏支持 6 种搜索引擎一键切换
-- **导航站** — 分组管理常用网站，一键直达
+- **搜索聚合** — 首页搜索栏支持 6 种搜索引擎一键切换 + 搜索历史
+- **导航站** — 分组管理常用网站，支持 UI 动态增删、自动获取 Favicon
+- **天气小组件** — 自动获取实时天气，显示温度、湿度、风速
+- **倒计时** — 重要事件 deadline 管理，支持添加/删除
 - **深色模式** — 右下角浮动按钮一键切换深色/浅色主题，自动记忆
+- **键盘快捷键** — 数字键 1-9 快速跳转模块，`/` 聚焦搜索，`Ctrl+K` 命令面板
+- **数据导入导出** — JSON 格式一键备份/恢复全部数据
 - **头像上传** — 支持头像文件上传，存储在服务器端
 - **一键换肤** — 通过 CSS 变量实现整站主题切换
 - **番茄钟** — 内置 25 分钟专注计时器
 - **本周趋势** — 状态趋势折线图可视化
 - **Bento Grid 布局** — 便当盒式仪表盘，高信息密度且不杂乱
 - **Docker 部署** — 一条命令启动前后端全部服务
+
+### 键盘快捷键
+
+| 快捷键 | 功能 |
+|---|---|
+| `Ctrl+K` / `⌘+K` | 打开/关闭命令面板 |
+| `1` | 回到首页 |
+| `2` ~ `8` | 快速跳转对应功能模块 |
+| `h` | 回到首页 |
+| `i` | 跳转洞察复盘 |
+| `/` | 聚焦搜索框 |
+| `Esc` | 关闭命令面板/弹窗 |
 
 ---
 
@@ -154,17 +176,19 @@ docker compose ps
 
 ### 数据备份与恢复
 
-数据存储在 Docker 数据卷 `workbench-data` 中：
+数据存储在 Docker 数据卷 `workbench-data` 中，也可以通过工作台页面的「导出数据」按钮导出 JSON 备份：
 
 ```bash
-# 备份数据库
+# 方式一：通过 Docker 卷备份数据库
 docker run --rm -v workbench-data:/data -v $(pwd):/backup alpine \
   cp /data/workbench.db /backup/workbench-backup-$(date +%Y%m%d).db
 
-# 恢复数据库
+# 方式二：通过 Docker 卷恢复数据库
 docker run --rm -v workbench-data:/data -v $(pwd):/backup alpine \
   cp /backup/workbench-backup-20260810.db /data/workbench.db
 ```
+
+> 也可以在工作台页面底部点击「导出数据」按钮，下载 JSON 备份文件；需要恢复时点击「导入数据」上传即可。
 
 ---
 
@@ -225,15 +249,16 @@ python3 -m http.server 8080
 
 ```
 personal-workbench/
-├── workbench-desktop.html   # 前端主应用
+├── workbench-desktop.html   # 前端主应用（单文件，含全部 CSS/JS）
 ├── assets/
-│   └── greet-banner.jpg     # 首页 Hero 背景图
+│   ├── greet-banner.jpg     # 首页 Hero 背景图
+│   └── avatar.jpg           # 默认头像
 ├── server/                  # 后端服务
 │   ├── index.js             # Express API 服务
 │   ├── package.json         # 依赖配置
 │   ├── package-lock.json    # 依赖锁定
 │   └── Dockerfile           # 后端 Docker 构建
-├── Dockerfile               # 前端 Docker 构建
+├── Dockerfile               # 前端 Docker 构建（Nginx）
 ├── docker-compose.yml       # Docker Compose 编排
 ├── nginx.conf               # Nginx 配置（含 API 反向代理）
 ├── .dockerignore
@@ -262,7 +287,7 @@ const CONFIG = {
     // 添加更多引擎...
   ],
 
-  // 导航链接
+  // 导航链接（也可在页面 UI 中动态添加）
   navLinks: [
     { group:"常用工具", items:[
       { name:"GitHub", url:"https://github.com", icon:"🐙", desc:"代码托管" },
@@ -299,6 +324,7 @@ const CONFIG = {
 - **后端**：Node.js 20 + Express 4 + better-sqlite3
 - **部署**：Nginx 1.27 Alpine + Docker Compose
 - **数据库**：SQLite（WAL 模式，高性能读写）
+- **天气**：wttr.in 免费 API（无需密钥）
 
 ## License
 

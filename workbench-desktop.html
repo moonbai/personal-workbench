@@ -112,6 +112,8 @@
   .navi.active { background: var(--drawer-active); color: var(--drawer-text); font-weight: 700; }
   .navi svg { color: var(--drawer-text-mute); flex: 0 0 auto; }
   .navi.active svg { color: var(--drawer-text); }
+  .nav-kbd { margin-left: auto; font-size: 10px; opacity: .35; background: var(--drawer-hover); border-radius: 4px; padding: 1px 6px; font-family: monospace; }
+  .navi:hover .nav-kbd { opacity: .6; }
   .nav-sep { font-size: 10.5px; opacity: .42; padding: 15px 14px 6px; letter-spacing: .1em; }
   .sidebar .foot { padding: 15px 20px; font-size: 11px; opacity: .42; border-top: 1px solid var(--drawer-hover); }
 
@@ -160,6 +162,87 @@
   .nav-link .nl-info { min-width: 0; }
   .nav-link .nl-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav-link .nl-desc { font-size: 11px; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-link .nl-favicon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto;
+    background: var(--surface-card); border: 1px solid var(--border); overflow: hidden; }
+  .nav-link .nl-favicon img { width: 18px; height: 18px; border-radius: 4px; }
+  .nav-link .nl-del { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: #fff; display: none; place-items: center; font-size: 11px; cursor: pointer; border: none; }
+  .nav-link:hover .nl-del { display: grid; }
+  .nav-link { position: relative; }
+  .nav-add-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; border-radius: 10px;
+    border: 1px dashed var(--border-input); color: var(--text-tertiary); cursor: pointer; font-size: 12.5px; transition: all .15s; background: transparent; }
+  .nav-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-muted); }
+  .nav-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .nav-group-header .nav-group-title { margin-bottom: 0; }
+
+  /* ---------- 命令面板 (Ctrl+K) ---------- */
+  .cmd-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+    display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .cmd-overlay.show { opacity: 1; pointer-events: auto; }
+  .cmd-panel { width: 560px; max-width: 90vw; background: var(--surface-card); border: 1px solid var(--border-input);
+    border-radius: 16px; box-shadow: var(--shadow-overlay); overflow: hidden; transform: translateY(-10px); transition: transform .15s; }
+  .cmd-overlay.show .cmd-panel { transform: translateY(0); }
+  .cmd-input-wrap { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .cmd-input-wrap svg { color: var(--text-tertiary); flex: 0 0 auto; }
+  .cmd-input-wrap input { flex: 1; border: none; outline: none; font-size: 16px; background: transparent; color: var(--text); }
+  .cmd-kbd { font-size: 11px; color: var(--text-tertiary); background: var(--surface-nested); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 8px; font-family: monospace; }
+  .cmd-results { max-height: 360px; overflow-y: auto; padding: 8px; }
+  .cmd-results::-webkit-scrollbar { width: 6px; }
+  .cmd-results::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 6px; }
+  .cmd-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: background .1s; }
+  .cmd-item:hover, .cmd-item.selected { background: var(--accent-muted); }
+  .cmd-item .ci-icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto;
+    background: var(--surface-nested); border: 1px solid var(--border); font-size: 16px; }
+  .cmd-item .ci-info { flex: 1; min-width: 0; }
+  .cmd-item .ci-title { font-size: 14px; font-weight: 600; }
+  .cmd-item .ci-desc { font-size: 11.5px; color: var(--text-tertiary); }
+  .cmd-item .ci-arrow { color: var(--text-tertiary); opacity: 0; transition: opacity .1s; }
+  .cmd-item:hover .ci-arrow, .cmd-item.selected .ci-arrow { opacity: 1; }
+  .cmd-group-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); padding: 8px 14px 4px; text-transform: uppercase; letter-spacing: .05em; }
+  .cmd-footer { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-top: 1px solid var(--border);
+    font-size: 11.5px; color: var(--text-tertiary); }
+  .cmd-footer span { display: flex; align-items: center; gap: 5px; }
+
+  /* ---------- 天气小组件 ---------- */
+  .weather-card { display: flex; align-items: center; gap: 14px; padding: 16px 20px; }
+  .weather-card .w-icon { font-size: 38px; line-height: 1; }
+  .weather-card .w-temp { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  .weather-card .w-info { flex: 1; }
+  .weather-card .w-desc { font-size: 13px; color: var(--text-secondary); }
+  .weather-card .w-city { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .weather-card .w-loading { font-size: 12px; color: var(--text-tertiary); }
+
+  /* ---------- 搜索历史 ---------- */
+  .search-history { position: absolute; top: 54px; left: 0; right: 0; background: var(--surface-card);
+    border: 1px solid var(--border-input); border-radius: 12px; box-shadow: var(--shadow-overlay);
+    padding: 6px; z-index: 100; display: none; max-height: 280px; overflow-y: auto; }
+  .search-history.show { display: block; }
+  .search-history-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); padding: 6px 12px 4px; }
+  .search-history-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .1s; }
+  .search-history-item:hover { background: var(--surface-nested); }
+  .search-history-item .sh-icon { color: var(--text-tertiary); flex: 0 0 auto; }
+  .search-history-item .sh-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-history-item .sh-del { color: var(--text-tertiary); cursor: pointer; opacity: 0; transition: opacity .1s; }
+  .search-history-item:hover .sh-del { opacity: 1; }
+  .search-history-item .sh-del:hover { color: var(--danger); }
+
+  /* ---------- 倒计时卡片 ---------- */
+  .countdown-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; }
+  .countdown-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-nested); }
+  .countdown-item .cd-days { font-size: 24px; font-weight: 800; letter-spacing: -.02em; min-width: 50px; text-align: center; }
+  .countdown-item .cd-info { flex: 1; }
+  .countdown-item .cd-name { font-size: 13px; font-weight: 600; }
+  .countdown-item .cd-date { font-size: 11px; color: var(--text-tertiary); }
+  .countdown-item .cd-del { color: var(--text-tertiary); cursor: pointer; opacity: 0; }
+  .countdown-item:hover .cd-del { opacity: 1; }
+
+  /* ---------- 数据导入导出 ---------- */
+  .data-actions { display: flex; gap: 8px; }
+  .data-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px;
+    border: 1px solid var(--border-input); background: var(--surface-card); color: var(--text-secondary);
+    font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .data-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-muted); }
 
   /* ---------- main ---------- */
   .main { margin-left: var(--sidebar-w); padding: 26px 34px 48px; }
@@ -590,7 +673,11 @@
       <div><h1 id="brandName">我的工作台</h1><p id="brandSlogan">Personal Workbench</p></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot" id="foot">数据仅存在本机 · 每日更新</div>
+    <div class="foot" id="foot" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span>数据持久化存储</span>
+      <span style="opacity:.5">·</span>
+      <span style="cursor:pointer;text-decoration:underline" onclick="window._openCmd&&window._openCmd()">Ctrl+K 命令面板</span>
+    </div>
   </aside>
   <!-- main -->
   <main class="main"><div id="screen"></div></main>
@@ -1055,17 +1142,30 @@ function renderHome(){
         <span class="se-icon">${eng?.icon||"🔍"}</span><span class="se-name">${eng?.name||"Google"}</span>
         <span class="se-arrow">${icon("chevron",14,2)}</span>
       </div>
-      <input type="text" id="searchInput" placeholder="输入关键词搜索..." />
+      <input type="text" id="searchInput" placeholder="输入关键词搜索...  ( / 快捷聚焦, Ctrl+K 命令面板)" />
       <button class="search-go" id="searchGo">${icon("search",16,2)} 搜索</button>
       <div class="search-engine-dropdown" id="engineDropdown">${engineItems}</div>
+      <div class="search-history" id="searchHistory"></div>
     </div></div>`;
 
-  // 导航链接站
-  const navGroups = (CONFIG.navLinks||[]).map(g=>{
-    const links = g.items.map(l=>`<a class="nav-link" href="${attr(l.url)}" target="_blank" rel="noopener">
-      <span class="nl-icon">${l.icon}</span>
-      <div class="nl-info"><div class="nl-name">${esc(l.name)}</div><div class="nl-desc">${esc(l.desc)}</div></div></a>`).join("");
-    return `<div class="nav-group"><div class="nav-group-title">${esc(g.group)}</div><div class="nav-links">${links}</div></div>`;
+  // 导航链接站（支持动态增删 + Favicon）
+  const navGroups = getNavLinks().map((g,gi)=>{
+    const links = g.items.map((l,li)=>{
+      const fav = getFavicon(l.url);
+      const iconHTML = fav ? `<div class="nl-favicon"><img src="${fav}" alt="" onerror="this.parentElement.innerHTML='${esc(l.icon)}'"></div>` : `<span class="nl-icon">${l.icon}</span>`;
+      return `<a class="nav-link" href="${attr(l.url)}" target="_blank" rel="noopener">
+        ${iconHTML}
+        <div class="nl-info"><div class="nl-name">${esc(l.name)}</div><div class="nl-desc">${esc(l.desc)}</div></div>
+        <button class="nl-del" data-bm-del-group="${gi}" data-bm-del-item="${li}">×</button>
+      </a>`;
+    }).join("");
+    return `<div class="nav-group">
+      <div class="nav-group-header">
+        <div class="nav-group-title">${esc(g.group)}</div>
+        <button class="nav-add-btn" data-bm-add="${gi}">${icon("plus",12,2)} 添加链接</button>
+      </div>
+      <div class="nav-links">${links}</div>
+    </div>`;
   }).join("");
 
   // 时钟卡
@@ -1080,6 +1180,7 @@ function renderHome(){
     ${grp("今日节奏","TODAY&nbsp;&nbsp;·&nbsp;&nbsp;RHYTHM")}
     <div class="bento">
       ${clockCard}
+      ${weatherTileHTML()}
       ${focusTileHTML()}
       ${quickTileHTML()}
       ${overviewTileHTML()}
@@ -1089,17 +1190,29 @@ function renderHome(){
     <div class="bento">${habitTileHTML()}${todoTileHTML()}</div>
 
     ${grp("专注与状态","FOCUS&nbsp;&nbsp;&&nbsp;&nbsp;MOOD")}
-    <div class="bento">${pomoTileHTML()}${trendTileHTML()}</div>
+    <div class="bento">${pomoTileHTML()}${trendTileHTML()}${countdownTileHTML()}</div>
 
     ${grp("收支与成长","MONEY&nbsp;&nbsp;&&nbsp;&nbsp;GROWTH")}
     <div class="bento">${spendTileHTML()}${booksTileHTML()}${goalsTileHTML()}</div>
 
     ${grp("快捷导航","NAVIGATION&nbsp;&nbsp;·&nbsp;&nbsp;LINKS")}
-    <div class="nav-station">${navGroups}</div>`;
+    <div class="nav-station">${navGroups}</div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-top:20px;padding:16px 0;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text-tertiary);margin-right:auto">数据管理</span>
+      <div class="data-actions">
+        <button class="data-btn" id="exportBtn">${icon("bolt",14,2)} 导出数据</button>
+        <button class="data-btn" id="importBtn">${icon("plus",14,2)} 导入数据</button>
+        <button class="data-btn" id="cmdHintBtn">${icon("search",14,2)} Ctrl+K 命令面板</button>
+      </div>
+    </div>`;
 
   wireHome();
   wireSearchBar();
+  wireNavStation();
+  wireDataActions();
   startClock();
+  loadWeather();
 }
 
 function wireHome(){
@@ -1145,11 +1258,41 @@ function wireSearchBar(){
   });
   const doSearch=()=>{
     const q=(input.value||"").trim(); if(!q) return;
+    addSearchHistory(q);
     const eng = CONFIG.searchEngines.find(x=>x.key===(data.__searchEngine||"google")) || CONFIG.searchEngines[0];
     window.open(eng.url + encodeURIComponent(q), "_blank");
   };
   go?.addEventListener("click",doSearch);
   input?.addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
+  // 搜索历史：聚焦时显示，失焦时隐藏
+  const historyBox = $("#searchHistory");
+  if(historyBox && input){
+    input.addEventListener("focus", ()=>{ if(getSearchHistory().length) renderSearchHistory(historyBox); });
+    input.addEventListener("blur", ()=>{ setTimeout(()=>historyBox.classList.remove("show"),200); });
+  }
+}
+
+/* ---------- 导航站交互（添加/删除书签） ---------- */
+function wireNavStation(){
+  $("#screen")?.querySelectorAll("[data-bm-add]").forEach(el=>{
+    el.onclick = ()=>addBookmark(+el.dataset.bmAdd);
+  });
+  $("#screen")?.querySelectorAll("[data-bm-del-group]").forEach(el=>{
+    el.onclick = e=>{ e.preventDefault(); e.stopPropagation(); removeBookmark(+el.dataset.bmDelGroup, +el.dataset.bmDelItem); };
+  });
+  // 倒计时添加/删除
+  const addCdBtn = $("#addCountdownBtn");
+  if(addCdBtn) addCdBtn.onclick = addCountdown;
+  $("#screen")?.querySelectorAll("[data-cd-del]").forEach(el=>{
+    el.onclick = ()=>removeCountdown(+el.dataset.cdDel);
+  });
+}
+
+/* ---------- 数据管理按钮 ---------- */
+function wireDataActions(){
+  const eb = $("#exportBtn"); if(eb) eb.onclick = exportData;
+  const ib = $("#importBtn"); if(ib) ib.onclick = importData;
+  const cb = $("#cmdHintBtn"); if(cb) cb.onclick = ()=>window._openCmd && window._openCmd();
 }
 
 /* ---------- 深色模式切换 ---------- */
@@ -1167,6 +1310,392 @@ function initThemeToggle(){
     store.save();
   };
   document.body.appendChild(btn);
+}
+
+/* ============================================================
+   命令面板 (Ctrl+K) — 全局快速搜索与跳转
+   ============================================================ */
+function initCommandPalette(){
+  const overlay = document.createElement("div");
+  overlay.className = "cmd-overlay";
+  overlay.id = "cmdOverlay";
+  overlay.innerHTML = `
+    <div class="cmd-panel" onclick="event.stopPropagation()">
+      <div class="cmd-input-wrap">
+        ${icon("search",18,2)}
+        <input type="text" id="cmdInput" placeholder="搜索模块、导航、或输入网址..." autocomplete="off" />
+        <span class="cmd-kbd">ESC</span>
+      </div>
+      <div class="cmd-results" id="cmdResults"></div>
+      <div class="cmd-footer">
+        <span>${icon("chevron",12,2)} 选择</span>
+        <span>↵ 跳转</span>
+        <span style="margin-left:auto;color:var(--text-tertiary)">Ctrl+K 打开/关闭</span>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector("#cmdInput");
+  const results = overlay.querySelector("#cmdResults");
+  let selectedIdx = 0;
+  let items = [];
+
+  function buildItems(q){
+    q = (q||"").toLowerCase().trim();
+    const list = [];
+    // 模块
+    CONFIG.modules.forEach(m=>{
+      if(!q || m.name.toLowerCase().includes(q) || (m.desc||"").toLowerCase().includes(q))
+        list.push({type:"module", icon:m.icon, title:m.name, desc:m.desc||"", action:()=>go(m.key)});
+    });
+    // 导航链接
+    getNavLinks().forEach(g=>{
+      g.items.forEach(l=>{
+        if(!q || l.name.toLowerCase().includes(q) || (l.desc||"").toLowerCase().includes(q) || (l.url||"").toLowerCase().includes(q))
+          list.push({type:"nav", icon:"🔗", title:l.name, desc:l.url, action:()=>window.open(l.url,"_blank")});
+      });
+    });
+    // 搜索引擎
+    CONFIG.searchEngines.forEach(e=>{
+      if(!q || e.name.toLowerCase().includes(q))
+        list.push({type:"search", icon:e.icon, title:`${e.name} 搜索`, desc:"搜索引擎", action:()=>{ data.__searchEngine=e.key; store.save(); go("home"); setTimeout(()=>$("#searchInput")?.focus(),100); }});
+    });
+    // 页面
+    if(!q || "首页".includes(q) || "home".includes(q))
+      list.push({type:"page", icon:"home", title:"首页", desc:"返回首页仪表盘", action:()=>go("home")});
+    if(!q || "洞察".includes(q) || "insight".includes(q))
+      list.push({type:"page", icon:"chart", title:"洞察复盘", desc:"统计与数据分析", action:()=>go("insight")});
+    // 如果输入像网址，直接打开
+    if(q && (q.includes(".") || q.startsWith("http"))){
+      const url = q.startsWith("http") ? q : `https://${q}`;
+      list.unshift({type:"url", icon:"🌐", title:`打开 ${q}`, desc: url, action:()=>window.open(url,"_blank")});
+    }
+    // 如果有查询词且没有完全匹配，添加搜索选项
+    if(q && !q.includes(".")){
+      const eng = CONFIG.searchEngines.find(x=>x.key===(data.__searchEngine||"google")) || CONFIG.searchEngines[0];
+      list.unshift({type:"search-go", icon:eng.icon, title:`${eng.name} 搜索「${q}」`, desc:"在新标签页打开", action:()=>window.open(eng.url+encodeURIComponent(q),"_blank")});
+    }
+    return list;
+  }
+
+  function renderResults(q){
+    items = buildItems(q);
+    selectedIdx = 0;
+    if(!items.length){ results.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-tertiary);font-size:13px">无匹配结果</div>`; return; }
+    let lastType = "";
+    let html = "";
+    items.forEach((it,i)=>{
+      if(it.type !== lastType){
+        const labels = {module:"功能模块",nav:"导航链接",search:"搜索引擎",page:"页面",url:"网址","search-go":"搜索"};
+        if(labels[it.type]) html += `<div class="cmd-group-label">${labels[it.type]}</div>`;
+        lastType = it.type;
+      }
+      html += `<div class="cmd-item ${i===0?'selected':''}" data-idx="${i}">
+        <div class="ci-icon">${it.icon.length>2?it.icon:icon(it.icon,16,2)}</div>
+        <div class="ci-info"><div class="ci-title">${esc(it.title)}</div><div class="ci-desc">${esc(it.desc)}</div></div>
+        <span class="ci-arrow">${icon("chevron",14,2)}</span></div>`;
+    });
+    results.innerHTML = html;
+    results.querySelectorAll(".cmd-item").forEach(el=>{
+      el.onclick = ()=>{ const idx=+el.dataset.idx; if(items[idx]) items[idx].action(); closeCmd(); };
+      el.onmouseenter = ()=>{ selectedIdx=+el.dataset.idx; updateSelected(); };
+    });
+  }
+  function updateSelected(){
+    results.querySelectorAll(".cmd-item").forEach((el,i)=>el.classList.toggle("selected",i===selectedIdx));
+    const sel = results.querySelector(".cmd-item.selected");
+    if(sel) sel.scrollIntoView({block:"nearest"});
+  }
+  function closeCmd(){ overlay.classList.remove("show"); input.value=""; }
+  function openCmd(){ overlay.classList.add("show"); setTimeout(()=>input.focus(),50); renderResults(""); }
+
+  input.addEventListener("input", ()=>renderResults(input.value));
+  input.addEventListener("keydown", e=>{
+    if(e.key==="ArrowDown"){ e.preventDefault(); selectedIdx=Math.min(selectedIdx+1,items.length-1); updateSelected(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); selectedIdx=Math.max(selectedIdx-1,0); updateSelected(); }
+    else if(e.key==="Enter"){ e.preventDefault(); if(items[selectedIdx]) items[selectedIdx].action(); closeCmd(); }
+    else if(e.key==="Escape"){ closeCmd(); }
+  });
+  overlay.onclick = closeCmd;
+  document.addEventListener("keydown", e=>{
+    if((e.ctrlKey||e.metaKey) && e.key==="k"){ e.preventDefault(); overlay.classList.contains("show")?closeCmd():openCmd(); }
+    else if(e.key==="Escape") closeCmd();
+  });
+  // 暴露给全局以便其他地方调用
+  window._openCmd = openCmd;
+}
+
+/* ============================================================
+   天气小组件 — 自动获取天气
+   ============================================================ */
+async function fetchWeather(){
+  try {
+    const res = await fetch("https://wttr.in/?format=j1");
+    const json = await res.json();
+    const cur = json.current_condition && json.current_condition[0];
+    const area = json.nearest_area && json.nearest_area[0];
+    if(!cur) return null;
+    const desc = cur.weatherDesc && cur.weatherDesc[0] && cur.weatherDesc[0].value || "";
+    const codeMap = {Sunny:"☀️",Clear:"☀️","Partly cloudy":"⛅️",Cloudy:"☁️",Overcast:"☁️",Mist:"🌫️",Fog:"🌫️","Light rain":"🌦️",Rain:"🌧️","Heavy rain":"⛈️",Drizzle:"🌦️",Snow:"❄️","Light snow":"🌨️",Thunder:"⛈️"};
+    const emoji = codeMap[desc] || "🌤️";
+    return {
+      temp: cur.temp_C + "°",
+      desc: desc,
+      icon: emoji,
+      city: area ? area.areaName[0].value : "",
+      humidity: cur.humidity + "%",
+      wind: cur.windspeedKmph + " km/h",
+    };
+  } catch(e){ return null; }
+}
+
+function weatherTileHTML(){
+  return `<div class="card weather-card b4" id="weatherCard">
+    <div class="w-icon" id="wIcon">⏳</div>
+    <div class="w-info">
+      <div class="w-temp" id="wTemp">--</div>
+      <div class="w-desc" id="wDesc">正在获取天气...</div>
+      <div class="w-city" id="wCity"></div>
+    </div>
+  </div>`;
+}
+
+async function loadWeather(){
+  const w = await fetchWeather();
+  if(!w){
+    const card = document.getElementById("weatherCard");
+    if(card){ card.querySelector(".w-icon").textContent="🌤️"; card.querySelector(".w-temp").textContent="--"; card.querySelector(".w-desc").textContent="天气获取失败"; }
+    return;
+  }
+  const el = (id)=>document.getElementById(id);
+  if(el("wIcon")) el("wIcon").textContent = w.icon;
+  if(el("wTemp")) el("wTemp").textContent = w.temp;
+  if(el("wDesc")) el("wDesc").textContent = `${w.desc} · 湿度 ${w.humidity}`;
+  if(el("wCity")) el("wCity").textContent = `${w.city} · 风速 ${w.wind}`;
+}
+
+/* ============================================================
+   搜索历史
+   ============================================================ */
+function getSearchHistory(){ return data.__searchHistory || []; }
+function addSearchHistory(q){
+  let h = getSearchHistory();
+  h = h.filter(x=>x!==q);
+  h.unshift(q);
+  h = h.slice(0, 8);
+  data.__searchHistory = h;
+  store.save();
+}
+function removeSearchHistory(q){
+  data.__searchHistory = (data.__searchHistory||[]).filter(x=>x!==q);
+  store.save();
+}
+function renderSearchHistory(container){
+  const h = getSearchHistory();
+  if(!h.length){ container.innerHTML=""; container.classList.remove("show"); return; }
+  container.innerHTML = `<div class="search-history-label">搜索历史</div>` +
+    h.map(q=>`<div class="search-history-item" data-q="${attr(q)}">
+      ${icon("search",14,2)}
+      <span class="sh-text">${esc(q)}</span>
+      <span class="sh-del" data-del="${attr(q)}">${icon("close",12,2)}</span>
+    </div>`).join("");
+  container.classList.add("show");
+  container.querySelectorAll(".search-history-item").forEach(el=>{
+    el.onclick = e=>{
+      if(e.target.closest("[data-del]")){ removeSearchHistory(el.dataset.q); renderSearchHistory(container); return; }
+      const input = document.getElementById("searchInput");
+      if(input){ input.value = el.dataset.q; input.focus(); }
+      container.classList.remove("show");
+    };
+  });
+}
+
+/* ============================================================
+   导航书签管理 — 动态增删
+   ============================================================ */
+function getNavLinks(){
+  return data.__navLinks || CONFIG.navLinks;
+}
+function getFavicon(url){
+  try { const u = new URL(url); return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`; }
+  catch(e){ return ""; }
+}
+function addBookmark(groupIdx){
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.innerHTML = `<div class="modal" style="width:440px">
+    <h3>添加导航链接</h3>
+    <div class="form-row" style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">名称</label>
+      <input type="text" id="bm-name" placeholder="如：GitHub" style="width:100%;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text)" />
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">网址</label>
+      <input type="text" id="bm-url" placeholder="https://..." style="width:100%;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text)" />
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">描述</label>
+      <input type="text" id="bm-desc" placeholder="简短描述" style="width:100%;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text)" />
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">图标 (emoji)</label>
+      <input type="text" id="bm-icon" placeholder="🐙" maxlength="4" style="width:80px;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text);text-align:center" />
+    </div>
+    <div class="modal-actions"><div class="spacer"></div>
+      <button class="btn ghost" id="bm-cancel">取消</button>
+      <button class="btn" id="bm-ok">添加</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  overlay.querySelector("#bm-cancel").onclick = close;
+  overlay.querySelector("#bm-ok").onclick = ()=>{
+    const name = overlay.querySelector("#bm-name").value.trim();
+    let url = overlay.querySelector("#bm-url").value.trim();
+    const desc = overlay.querySelector("#bm-desc").value.trim();
+    const ic = overlay.querySelector("#bm-icon").value.trim() || "🔗";
+    if(!name || !url){ return; }
+    if(!url.startsWith("http")) url = "https://" + url;
+    if(!data.__navLinks) data.__navLinks = JSON.parse(JSON.stringify(CONFIG.navLinks));
+    if(groupIdx >= 0 && data.__navLinks[groupIdx]){
+      data.__navLinks[groupIdx].items.push({name, url, icon:ic, desc:desc||name});
+    } else {
+      if(!data.__navLinks[0]) data.__navLinks.push({group:"收藏", items:[]});
+      data.__navLinks[0].items.push({name, url, icon:ic, desc:desc||name});
+    }
+    store.save();
+    render();
+    close();
+  };
+  setTimeout(()=>overlay.querySelector("#bm-name").focus(), 50);
+}
+function removeBookmark(groupIdx, itemIdx){
+  if(!data.__navLinks) return;
+  if(data.__navLinks[groupIdx] && data.__navLinks[groupIdx].items[itemIdx]){
+    data.__navLinks[groupIdx].items.splice(itemIdx, 1);
+    store.save();
+    render();
+  }
+}
+
+/* ============================================================
+   倒计时卡片
+   ============================================================ */
+function getCountdowns(){ return data.__countdowns || []; }
+function addCountdown(){
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.innerHTML = `<div class="modal" style="width:400px">
+    <h3>添加倒计时</h3>
+    <div class="form-row" style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">事件名称</label>
+      <input type="text" id="cd-name" placeholder="如：项目截止" style="width:100%;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text)" />
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block">目标日期</label>
+      <input type="date" id="cd-date" style="width:100%;padding:10px 14px;border:1px solid var(--border-input);border-radius:10px;font-size:14px;background:var(--surface-card);color:var(--text)" />
+    </div>
+    <div class="modal-actions"><div class="spacer"></div>
+      <button class="btn ghost" id="cd-cancel">取消</button>
+      <button class="btn" id="cd-ok">添加</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  overlay.querySelector("#cd-cancel").onclick = close;
+  overlay.querySelector("#cd-ok").onclick = ()=>{
+    const name = overlay.querySelector("#cd-name").value.trim();
+    const date = overlay.querySelector("#cd-date").value;
+    if(!name || !date){ return; }
+    if(!data.__countdowns) data.__countdowns = [];
+    data.__countdowns.push({id:Date.now(), name, date});
+    store.save();
+    render();
+    close();
+  };
+  setTimeout(()=>overlay.querySelector("#cd-name").focus(), 50);
+}
+function removeCountdown(id){
+  data.__countdowns = (data.__countdowns||[]).filter(x=>x.id!==id);
+  store.save();
+  render();
+}
+function countdownTileHTML(){
+  const cds = getCountdowns();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = cds.map(cd=>{
+    const target = new Date(cd.date); target.setHours(0,0,0,0);
+    const days = Math.ceil((target - today) / (1000*60*60*24));
+    const isPast = days < 0;
+    return `<div class="countdown-item">
+      <div class="cd-days" style="color:${isPast?'var(--text-tertiary)':'var(--module-3)'}">${isPast?Math.abs(days):days}</div>
+      <div class="cd-info"><div class="cd-name">${esc(cd.name)}</div><div class="cd-date">${cd.date} · ${isPast?'已过 '+Math.abs(days)+' 天':'还有 '+days+' 天'}</div></div>
+      <span class="cd-del" data-cd-del="${cd.id}">${icon("trash",14,2)}</span>
+    </div>`;
+  }).join("");
+  return `<div class="card countdown-card b4">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px">${icon("calendar",16,2)} 倒计时</div>
+      <button class="data-btn" style="padding:4px 10px;font-size:11.5px" id="addCountdownBtn">${icon("plus",12,2)} 添加</button>
+    </div>
+    ${items || '<div style="font-size:12px;color:var(--text-tertiary);padding:12px 0;text-align:center">暂无倒计时，点击添加</div>'}
+  </div>`;
+}
+
+/* ============================================================
+   数据导入/导出
+   ============================================================ */
+function exportData(){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `workbench-backup-${isoToday()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = async e=>{
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    try {
+      const text = await f.text();
+      const parsed = JSON.parse(text);
+      if(typeof parsed !== "object" || parsed === null) throw new Error("Invalid format");
+      data = parsed;
+      store.save();
+      render();
+    } catch(err){ alert("导入失败：文件格式不正确"); }
+  };
+  input.click();
+}
+
+/* ============================================================
+   键盘快捷键
+   ============================================================ */
+function initKeyboardShortcuts(){
+  document.addEventListener("keydown", e=>{
+    if(e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    // 数字键 1-9 快速跳转模块
+    if(e.key >= "1" && e.key <= "9"){
+      const idx = parseInt(e.key) - 1;
+      if(idx === 0) go("home");
+      else if(idx <= CONFIG.modules.length) go(CONFIG.modules[idx-1].key);
+    }
+    // g 然后按字母导航
+    if(e.key === "h") go("home");
+    if(e.key === "i") go("insight");
+    // / 聚焦搜索
+    if(e.key === "/"){
+      e.preventDefault();
+      const si = document.getElementById("searchInput");
+      if(si) si.focus();
+      else window._openCmd && window._openCmd();
+    }
+  });
 }
 
 /* ---------- INSIGHT ---------- */
@@ -1519,9 +2048,9 @@ function render(){ if(view==="home") renderHome(); else if(view==="insight") ren
 
 function buildNav(){
   $("#brandName").textContent=CONFIG.owner; $("#brandSlogan").textContent=CONFIG.slogan;
-  const html=[`<div class="navi" data-go="home">${icon("home",19)}首页</div>`,
+  const html=[`<div class="navi" data-go="home">${icon("home",19)}首页<span class="nav-kbd">1</span></div>`,
     `<div class="nav-sep">功能模块</div>`]
-    .concat(CONFIG.modules.map(m=>`<div class="navi" data-go="${m.key}">${icon(m.icon,19)}${m.name}</div>`))
+    .concat(CONFIG.modules.map((m,i)=>`<div class="navi" data-go="${m.key}">${icon(m.icon,19)}${m.name}<span class="nav-kbd">${i+2}</span></div>`))
     .concat([`<div class="nav-sep">统计</div>`, `<div class="navi" data-go="insight">${icon("chart",19)}洞察复盘</div>`]);
   $("#nav").innerHTML=html.join("");
   $("#nav").querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>go(el.dataset.go));
@@ -1562,6 +2091,8 @@ buildNav();
   _booted = true;
   if(data.__avatar) $("#avaImg").src = data.__avatar;
   initThemeToggle();
+  initCommandPalette();
+  initKeyboardShortcuts();
   render();
   startClock();
 })();
