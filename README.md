@@ -188,6 +188,67 @@ docker run --rm -v workbench-data:/data -v $(pwd):/backup alpine \
 
 > 也可以在工作台页面底部点击「导出数据」按钮，下载 JSON 备份文件；需要恢复时点击「导入数据」上传即可。
 
+### 使用预构建镜像（无需编译）
+
+项目通过 GitHub Actions 自动构建多架构 Docker 镜像并发布到 GHCR，可直接拉取使用，无需本地构建：
+
+```bash
+# 使用预构建镜像一键启动
+docker compose -f docker-compose.prod.yml up -d
+```
+
+也可以单独拉取镜像：
+
+```bash
+# 拉取前端镜像
+docker pull ghcr.io/moonbai/personal-workbench-frontend:latest
+
+# 拉取后端镜像
+docker pull ghcr.io/moonbai/personal-workbench-backend:latest
+```
+
+> 镜像会自动适配当前硬件架构（amd64 / arm64 / arm/v7）。
+
+---
+
+## CI/CD 自动构建
+
+项目配置了 GitHub Actions 工作流（`.github/workflows/docker-publish.yml`），在以下情况自动触发构建：
+
+| 触发条件 | 说明 |
+|---|---|
+| push 到 `main` 分支 | 构建并推送 `latest` 标签 |
+| 发布 `v*` Tag（如 `v1.0.0`） | 构建并推送语义化版本标签 |
+| Pull Request | 仅构建验证，不推送 |
+| 手动触发 | 在 Actions 页面手动运行 |
+
+### 支持的硬件架构
+
+| 架构 | 典型设备 |
+|---|---|
+| `linux/amd64` | x86 服务器 / PC / 大多数云主机 |
+| `linux/arm64` | Apple Silicon (M1/M2/M3) / 树莓派 4/5 / ARM 服务器 |
+| `linux/arm/v7` | 树莓派 3 / 旧款 ARM 设备 |
+
+### 镜像标签策略
+
+| 标签 | 说明 |
+|---|---|
+| `latest` | main 分支最新版本 |
+| `1.2.3` | 语义化版本（发布 v1.2.3 Tag 时生成） |
+| `1.2` | 主版本.次版本 |
+| `1` | 主版本 |
+| `sha-xxxxxx` | Git commit 短哈希 |
+
+### Docker Hub 同步（可选）
+
+如需同步推送到 Docker Hub，在仓库 Settings → Secrets and variables → Actions 中配置：
+
+- **Variables**: `DOCKERHUB_USERNAME` — Docker Hub 用户名
+- **Secrets**: `DOCKERHUB_TOKEN` — Docker Hub Access Token
+
+配置后工作流会自动同步镜像到 Docker Hub。
+
 ---
 
 ## 本地开发
@@ -247,21 +308,28 @@ python3 -m http.server 8080
 
 ```
 personal-workbench/
-├── workbench-desktop.html   # 前端主应用（单文件，含全部 CSS/JS）
+├── workbench-desktop.html     # 前端主应用（单文件，含全部 CSS/JS）
 ├── assets/
-│   ├── greet-banner.jpg     # 首页 Hero 背景图
-│   └── avatar.jpg           # 默认头像
-├── server/                  # 后端服务
-│   ├── index.js             # Express API 服务
-│   ├── package.json         # 依赖配置
-│   ├── package-lock.json    # 依赖锁定
-│   └── Dockerfile           # 后端 Docker 构建
-├── Dockerfile               # 前端 Docker 构建（Nginx）
-├── docker-compose.yml       # Docker Compose 编排
-├── nginx.conf               # Nginx 配置（含 API 反向代理）
+│   ├── greet-banner.jpg       # 首页 Hero 背景图
+│   └── avatar.jpg             # 默认头像
+├── server/                    # 后端服务
+│   ├── index.js               # Express API 服务
+│   ├── package.json           # 依赖配置
+│   ├── package-lock.json      # 依赖锁定
+│   └── Dockerfile             # 后端 Docker 构建（多阶段）
+├── .github/
+│   ├── workflows/
+│   │   └── docker-publish.yml # CI/CD 多架构自动构建
+│   ├── ISSUE_TEMPLATE/        # Issue 模板
+│   └── PULL_REQUEST_TEMPLATE.md
+├── Dockerfile                 # 前端 Docker 构建（Nginx）
+├── docker-compose.yml         # 本地开发编排（从源码构建）
+├── docker-compose.prod.yml    # 生产部署编排（拉取预构建镜像）
+├── nginx.conf                 # Nginx 配置（含 API 反向代理）
 ├── .dockerignore
 ├── .gitignore
-├── deploy.sh                # GitHub 一键部署脚本
+├── CONTRIBUTING.md            # 贡献指南
+├── deploy.sh                  # GitHub 一键部署脚本
 ├── LICENSE
 └── README.md
 ```
@@ -323,6 +391,7 @@ const CONFIG = {
 - **部署**：Nginx 1.27 Alpine + Docker Compose
 - **数据库**：SQLite（WAL 模式，高性能读写）
 - **天气**：wttr.in 免费 API（无需密钥）
+- **CI/CD**：GitHub Actions 多架构构建（amd64 / arm64 / arm/v7）
 
 ## License
 

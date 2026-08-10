@@ -1,0 +1,165 @@
+# ============================================================
+# Personal Workbench - Multi-arch Docker Image Build & Publish
+# ============================================================
+# 触发条件：push 到 main 分支 / 发布 Tag / 手动触发
+# 目标平台：linux/amd64, linux/arm64, linux/arm/v7
+# 镜像仓库：GitHub Container Registry (ghcr.io)
+# ============================================================
+
+name: Build & Publish Docker Images
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: frontend
+            context: .
+            dockerfile: ./Dockerfile
+            description: "Personal Workbench - Frontend (Nginx)"
+          - image: backend
+            context: ./server
+            dockerfile: ./server/Dockerfile
+            description: "Personal Workbench - Backend (Node.js + SQLite)"
+
+    steps:
+      # ---- 1. 检出代码 ----
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- 2. 设置 QEMU（跨架构模拟）----
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64,arm
+
+      # ---- 3. 设置 Docker Buildx ----
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # ---- 4. 登录 GHCR ----
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- 5. 生成镜像标签和 OCI 标注 ----
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+          tags: |
+            # latest 标签（仅 main 分支）
+            type=raw,value=latest,enable={{is_default_branch}}
+            # 分支名
+            type=ref,event=branch
+            # PR 标签
+            type=ref,event=pr
+            # 语义化版本：v1.2.3 → 1.2.3, 1.2, 1
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # Git SHA 短哈希
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Personal Workbench ${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      # ---- 6. 构建并推送多架构镜像 ----
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  # ============================================================
+  # 可选：同步推送到 Docker Hub
+  # 需要在仓库 Settings → Secrets 中配置：
+  #   DOCKERHUB_USERNAME - Docker Hub 用户名
+  #   DOCKERHUB_TOKEN    - Docker Hub Access Token
+  # ============================================================
+  publish-dockerhub:
+    name: Sync to Docker Hub
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DOCKERHUB_USERNAME != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [frontend, backend]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64,arm
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/workbench-${{ matrix.image }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Personal Workbench ${{ matrix.image }}
+            org.opencontainers.image.description=个人工作台 - ${{ matrix.image }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image == 'frontend' && '.' || './server' }}
+          file: ${{ matrix.image == 'frontend' && './Dockerfile' || './server/Dockerfile' }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
