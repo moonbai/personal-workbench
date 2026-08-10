@@ -31,10 +31,10 @@ services:
     healthcheck:
       # curl -f 在 HTTP 4xx/5xx 时返回非零退出码，兼容性优于 wget
       test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/api/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     # 日志滚动：防止长期运行日志占满磁盘
     logging:
       driver: "json-file"
@@ -65,9 +65,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 5s
     deploy:
       resources:

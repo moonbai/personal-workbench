@@ -23,9 +23,15 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'workbench.d
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'data', 'uploads');
 const MAX_DATA_SIZE = 50 * 1024 * 1024; // 50MB
 
-// 确保目录存在
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// 确保目录存在（recursive: true 在目录已存在时不报错）
+try {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch (e) {
+  console.error('[Workbench Server] Failed to create directories:', e.message);
+  console.error('[Workbench Server] Check volume permissions for /app/data');
+  process.exit(1);
+}
 
 // 中间件
 app.use(cors());

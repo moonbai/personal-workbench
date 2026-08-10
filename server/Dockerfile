@@ -15,8 +15,12 @@ WORKDIR /app
 # 仅复制依赖文件，利用 Docker 缓存层
 COPY package.json package-lock.json* ./
 
-# 使用 npm ci 确保可复现安装（优先），回退到 npm install
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
+# npm ci 要求 lock 文件与 package.json 严格一致，不匹配则回退 npm install
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev 2>/dev/null || npm install --omit=dev; \
+    else \
+      npm install --omit=dev; \
+    fi
 
 # ---- 阶段 2：运行阶段（精简镜像）----
 FROM node:20-alpine
@@ -43,19 +47,22 @@ COPY package.json ./
 COPY . .
 
 # 创建数据持久化目录并设置权限
+# 关键：先创建目录并设置属主，再声明 VOLUME
+# 这样 Docker 匿名卷挂载时继承目录的属主和权限
 RUN mkdir -p /app/data/uploads && \
     chown -R workbench:workbench /app
 
 # 切换为非 root 用户
 USER workbench
 
-# 数据持久化目录
+# 数据持久化目录（挂载后 workbench 用户仍可读写）
 VOLUME ["/app/data"]
 
 EXPOSE 3001
 
 # 健康检查 — curl -f 在 HTTP 错误时返回非零退出码
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+# start_period 给 better-sqlite3 初始化留足时间
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
   CMD curl -f http://127.0.0.1:3001/api/health || exit 1
 
 CMD ["node", "index.js"]
