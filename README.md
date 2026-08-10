@@ -38,6 +38,7 @@
 - **番茄钟** — 内置 25 分钟专注计时器
 - **本周趋势** — 状态趋势折线图可视化
 - **Bento Grid 布局** — 便当盒式仪表盘，高信息密度且不杂乱
+- **自适应界面** — 单页面自动适配桌面/平板/手机，小屏切换为底部导航+抽屉模式
 - **Docker 部署** — 一条命令启动前后端全部服务
 
 ### 键盘快捷键
@@ -141,7 +142,10 @@ services:
       - "${PORT:-8080}:80"
     volumes:
       # 只读挂载，防止容器内篡改
-      - ./workbench-desktop.html:/usr/share/nginx/html/index.html:ro
+      # 自适应版（默认首页）+ 桌面版 + 手机版 均保留
+      - ./workbench.html:/usr/share/nginx/html/index.html:ro
+      - ./workbench-desktop.html:/usr/share/nginx/html/desktop.html:ro
+      - ./workbench-mobile.html:/usr/share/nginx/html/mobile.html:ro
       - ./assets:/usr/share/nginx/html/assets:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -205,7 +209,7 @@ docker compose ps
 
 ### 部署提示
 
-- **前端热更新**：直接修改宿主机的 `workbench-desktop.html` / `assets/` / `nginx.conf`，无需重建容器，Nginx 自动生效
+- **前端热更新**：直接修改宿主机的 `workbench.html` / `assets/` / `nginx.conf`，无需重建容器，Nginx 自动生效
 - **后端代码修改**：必须执行 `docker compose up -d --build` 重新构建镜像
 - **外网部署**：服务器放行 8080 端口（或自定义端口），通过 `IP:8080` 访问
 - **资源限制**：后端限制 0.5 CPU / 512M，前端限制 0.3 CPU / 256M，可根据宿主机配置调整
@@ -336,6 +340,9 @@ npm start
 # 在项目根目录另开终端
 python3 -m http.server 8080
 # 前端运行在 http://localhost:8080
+# 访问 / → 自适应版（推荐）
+# 访问 /desktop.html → 桌面版
+# 访问 /mobile.html → 手机版
 ```
 
 前端会自动检测后端地址：Docker 环境走 nginx 代理，本地开发自动连接 `localhost:3001`。
@@ -376,7 +383,9 @@ python3 -m http.server 8080
 
 ```
 personal-workbench/
-├── workbench-desktop.html     # 前端主应用（单文件，含全部 CSS/JS）
+├── workbench.html             # 自适应版（默认首页，桌面/手机自动切换）
+├── workbench-desktop.html     # 桌面版（独立保留）
+├── workbench-mobile.html      # 手机版（独立保留）
 ├── assets/
 │   ├── greet-banner.jpg       # 首页 Hero 背景图
 │   └── avatar.jpg             # 默认头像
@@ -409,7 +418,7 @@ personal-workbench/
 
 ### 修改模块
 
-编辑 `workbench-desktop.html` 中的 `CONFIG` 对象：
+编辑 `workbench.html`（自适应版）或 `workbench-desktop.html`（桌面版）中的 `CONFIG` 对象：
 
 ```javascript
 const CONFIG = {
