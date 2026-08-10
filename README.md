@@ -288,6 +288,35 @@ docker pull ghcr.io/moonbai/personal-workbench-backend:latest
 
 配置后工作流会自动同步镜像到 Docker Hub。
 
+### GitHub Release 自动发布
+
+推送 `v*` 标签时，工作流会在构建镜像后自动创建 GitHub Release，包含以下附件：
+
+| 附件 | 说明 |
+|---|---|
+| `docker-compose.yml` | 预配置版本号的部署文件，下载即用 |
+| `.env.example` | 环境变量模板 |
+| `QUICKSTART.md` | 快速部署指南 |
+
+Release 说明会自动生成变更日志（基于 PR/Commit），并附带镜像地址和部署指引。
+
+**发布新版本的流程：**
+
+```bash
+# 1. 确保所有改动已合并到 main 分支
+git checkout main && git pull
+
+# 2. 创建版本标签（语义化版本）
+git tag v1.0.0
+git push origin v1.0.0
+
+# 3. GitHub Actions 自动执行：
+#    → 构建多架构镜像 → 推送到 GHCR → 创建 GitHub Release
+```
+
+> 含 `-` 的标签（如 `v1.0.0-beta.1`）会自动标记为预发布（pre-release）。
+> 访问 [Releases 页面](https://github.com/moonbai/personal-workbench/releases) 查看已发布版本。
+
 ---
 
 ## 本地开发

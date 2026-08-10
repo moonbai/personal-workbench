@@ -1,9 +1,10 @@
 # ============================================================
-# Personal Workbench - Multi-arch Docker Image Build & Publish
+# Personal Workbench - Multi-arch Docker Build, Publish & Release
 # ============================================================
-# 触发条件：push 到 main 分支 / 发布 Tag / 手动触发
+# 触发条件：push 到 main 分支 / 发布 Tag / PR / 手动触发
 # 目标平台：linux/amd64, linux/arm64, linux/arm/v7
 # 镜像仓库：GitHub Container Registry (ghcr.io)
+# 发布 Release：推送 v* 标签时自动创建 GitHub Release
 # ============================================================
 
 name: Build & Publish Docker Images
@@ -21,10 +22,13 @@ env:
   IMAGE_PREFIX: ${{ github.repository }}
 
 permissions:
-  contents: read
+  contents: write   # 创建 Release 需要 write 权限
   packages: write
 
 jobs:
+  # ============================================================
+  # Job 1: 构建多架构 Docker 镜像
+  # ============================================================
   build:
     name: Build ${{ matrix.image }}
     runs-on: ubuntu-latest
@@ -106,7 +110,150 @@ jobs:
           sbom: true
 
   # ============================================================
-  # 可选：同步推送到 Docker Hub
+  # Job 2: 创建 GitHub Release（仅推送 v* 标签时触发）
+  # ============================================================
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- 1. 提取版本号 ----
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "📋 Tag: $TAG | Version: $VERSION"
+
+      # ---- 2. 生成部署用的 docker-compose 文件 ----
+      # 将镜像标签替换为具体版本号，用户下载后直接可用
+      - name: Generate release compose file
+        run: |
+          mkdir -p release-assets
+          # 替换镜像标签为当前版本号
+          sed 's/:latest$/:${{ steps.version.outputs.version }}/' docker-compose.prod.yml > release-assets/docker-compose.yml
+          # 复制 .env.example
+          cp .env.example release-assets/.env.example
+
+      # ---- 3. 生成快速部署指南 ----
+      - name: Generate quick-start guide
+        run: |
+          cat > release-assets/QUICKSTART.md << 'GUIDE_EOF'
+          # Personal Workbench 快速部署指南
+
+          ## 方式一：Docker Compose 一键启动（推荐）
+
+          1. 下载本 Release 中的 `docker-compose.yml` 和 `.env.example`
+          2. 放到同一目录下，执行：
+
+          ```bash
+          # 复制环境变量模板（可选，默认端口 8080）
+          cp .env.example .env
+
+          # 拉取镜像并启动
+          docker compose up -d
+          ```
+
+          3. 浏览器访问 http://localhost:8080
+
+          ## 方式二：手动 docker run
+
+          ```bash
+          # 创建网络
+          docker network create workbench-net
+
+          # 启动后端
+          docker run -d --name workbench-backend \
+            --network workbench-net \
+            -v workbench-data:/app/data \
+            -e PORT=3001 \
+            -e DB_PATH=/app/data/workbench.db \
+            -e UPLOAD_DIR=/app/data/uploads \
+            --restart unless-stopped \
+            ghcr.io/moonbai/personal-workbench-backend:latest
+
+          # 启动前端
+          docker run -d --name workbench-frontend \
+            --network workbench-net \
+            -p 8080:80 \
+            --restart unless-stopped \
+            ghcr.io/moonbai/personal-workbench-frontend:latest
+          ```
+
+          ## 自定义端口
+
+          编辑 `.env` 文件修改 `PORT=3000`，或直接指定：
+
+          ```bash
+          PORT=3000 docker compose up -d
+          ```
+
+          ## 数据备份
+
+          ```bash
+          docker run --rm -v workbench-data:/data -v $(pwd):/backup alpine \
+            cp /data/workbench.db /backup/workbench-backup-$(date +%Y%m%d).db
+          ```
+
+          ## 支持的架构
+
+          | 架构 | 典型设备 |
+          |---|---|
+          | linux/amd64 | x86 服务器 / PC / 云主机 |
+          | linux/arm64 | Apple Silicon / 树莓派 4/5 |
+          | linux/arm/v7 | 树莓派 3 / 旧款 ARM 设备 |
+          GUIDE_EOF
+
+      # ---- 4. 创建 GitHub Release ----
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          generate_release_notes: true
+          body: |
+            ---
+
+            ## 🚀 快速部署
+
+            下载下方 `docker-compose.yml` 和 `.env.example`，执行：
+
+            ```bash
+            docker compose up -d
+            ```
+
+            访问 http://localhost:8080 即可使用。
+
+            详见 `QUICKSTART.md` 完整部署指南。
+
+            ## 📦 Docker 镜像
+
+            | 镜像 | 地址 |
+            |---|---|
+            | 前端 | `ghcr.io/moonbai/personal-workbench-frontend:${{ steps.version.outputs.version }}` |
+            | 后端 | `ghcr.io/moonbai/personal-workbench-backend:${{ steps.version.outputs.version }}` |
+
+            支持架构：`linux/amd64`、`linux/arm64`、`linux/arm/v7`
+
+            ## 📝 说明
+
+            完整文档请访问 [README](https://github.com/moonbai/personal-workbench#readme)。
+          files: |
+            release-assets/docker-compose.yml
+            release-assets/.env.example
+            release-assets/QUICKSTART.md
+
+  # ============================================================
+  # Job 3: 可选 — 同步推送到 Docker Hub
   # 需要在仓库 Settings → Secrets 中配置：
   #   DOCKERHUB_USERNAME - Docker Hub 用户名
   #   DOCKERHUB_TOKEN    - Docker Hub Access Token
