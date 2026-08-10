@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  workbench:
+    build: .
+    container_name: personal-workbench
+    ports:
+      - "${PORT:-8080}:80"
+    volumes:
+      # 挂载 HTML 文件，方便热更新
+      - ./workbench-desktop.html:/usr/share/nginx/html/index.html:ro
+      - ./assets:/usr/share/nginx/html/assets:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - workbench-net
+
+networks:
+  workbench-net:
+    driver: bridge
