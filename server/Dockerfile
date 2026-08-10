@@ -27,6 +27,9 @@ LABEL org.opencontainers.image.description="个人工作台后端 - Node.js + Ex
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/moonbai/personal-workbench"
 
+# 安装 curl 用于健康检查
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 # 创建非 root 用户提升安全性
@@ -51,8 +54,8 @@ VOLUME ["/app/data"]
 
 EXPOSE 3001
 
-# 健康检查 — busybox wget 在所有架构的 alpine 上均可用
+# 健康检查 — curl -f 在 HTTP 错误时返回非零退出码
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1
+  CMD curl -f http://127.0.0.1:3001/api/health || exit 1
 
 CMD ["node", "index.js"]

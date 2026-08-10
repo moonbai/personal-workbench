@@ -73,13 +73,23 @@ docker compose up -d --build
 
 ### 自定义端口
 
-默认使用 8080 端口，可通过环境变量修改：
+默认使用 8080 端口。推荐通过 `.env` 文件管理端口配置：
 
 ```bash
-# 使用 3000 端口
-PORT=3000 docker compose up -d --build
+# 复制环境变量模板
+cp .env.example .env
+
+# 编辑 .env，修改 PORT=3000
+# 然后启动
+docker compose up -d --build
 
 # 访问 http://localhost:3000
+```
+
+也可以直接通过环境变量指定：
+
+```bash
+PORT=3000 docker compose up -d --build
 ```
 
 ### docker-compose.yml 完整配置
@@ -95,19 +105,30 @@ services:
     build: ./server
     container_name: workbench-backend
     restart: unless-stopped
+    # 资源限制：防止突发占用挤占宿主机
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     volumes:
-      # 数据持久化：SQLite 数据库和上传的头像
       - workbench-data:/app/data
     environment:
       - PORT=3001
       - DB_PATH=/app/data/workbench.db
       - UPLOAD_DIR=/app/data/uploads
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/api/health"]
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      start_period: 10s
+    # 日志滚动：防止爆盘
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - workbench-net
 
@@ -119,7 +140,7 @@ services:
     ports:
       - "${PORT:-8080}:80"
     volumes:
-      # 挂载文件方便热更新
+      # 只读挂载，防止容器内篡改
       - ./workbench-desktop.html:/usr/share/nginx/html/index.html:ro
       - ./assets:/usr/share/nginx/html/assets:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -127,11 +148,21 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - workbench-net
 
@@ -168,9 +199,17 @@ docker compose down -v
 # 重新构建镜像
 docker compose build --no-cache
 
-# 查看服务状态
+# 查看服务状态（含健康检测）
 docker compose ps
 ```
+
+### 部署提示
+
+- **前端热更新**：直接修改宿主机的 `workbench-desktop.html` / `assets/` / `nginx.conf`，无需重建容器，Nginx 自动生效
+- **后端代码修改**：必须执行 `docker compose up -d --build` 重新构建镜像
+- **外网部署**：服务器放行 8080 端口（或自定义端口），通过 `IP:8080` 访问
+- **资源限制**：后端限制 0.5 CPU / 512M，前端限制 0.3 CPU / 256M，可根据宿主机配置调整
+- **日志限制**：每个容器最多保留 3 个日志文件，每个 10MB，防止长期运行爆盘
 
 ### 数据备份与恢复
 
@@ -328,6 +367,7 @@ personal-workbench/
 ├── nginx.conf                 # Nginx 配置（含 API 反向代理）
 ├── .dockerignore
 ├── .gitignore
+├── .env.example               # 环境变量模板（端口配置）
 ├── CONTRIBUTING.md            # 贡献指南
 ├── deploy.sh                  # GitHub 一键部署脚本
 ├── LICENSE

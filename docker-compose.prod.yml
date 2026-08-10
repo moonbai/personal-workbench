@@ -6,7 +6,8 @@
 # 用法：
 #   docker compose -f docker-compose.prod.yml up -d
 # 自定义端口：
-#   PORT=3000 docker compose -f docker-compose.prod.yml up -d
+#   cp .env.example .env && 修改 PORT
+# 访问地址：http://localhost:${PORT:-8080}
 # ============================================================
 
 version: "3.8"
@@ -17,6 +18,11 @@ services:
     image: ghcr.io/moonbai/personal-workbench-backend:latest
     container_name: workbench-backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     volumes:
       - workbench-data:/app/data
     environment:
@@ -24,11 +30,16 @@ services:
       - DB_PATH=/app/data/workbench.db
       - UPLOAD_DIR=/app/data/uploads
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/api/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/api/health"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - workbench-net
 
@@ -38,16 +49,27 @@ services:
     container_name: workbench-frontend
     restart: unless-stopped
     ports:
+      # 对外端口，默认 8080，可通过 .env 或环境变量 PORT 自定义
       - "${PORT:-8080}:80"
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - workbench-net
 
