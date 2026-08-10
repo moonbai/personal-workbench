@@ -1,11 +1,13 @@
 # 个人工作台 · Personal Workbench
 
-> 个人每日工作台 —— 每日计划、习惯打卡、记账本、长期目标、心情日记，全部集中在一个页面里。前后端分离架构，数据持久化存储在 SQLite 数据库中，支持 Docker 一键部署。
+> 个人每日工作台 + 导航站 —— 集每日计划、习惯打卡、记账本、长期目标、心情日记、搜索聚合、快捷导航于一体。前后端分离架构，数据持久化存储在 SQLite 数据库中，支持 Docker 一键部署。
 
 ## 功能模块
 
 | 模块 | 说明 |
 |---|---|
+| 🔍 搜索聚合 | 多搜索引擎一键切换（Google / 百度 / Bing / GitHub / 知乎 / B站） |
+| 🔗 快捷导航 | 分组导航站（常用工具 / 开发资源 / 社交媒体 / 效率工具） |
 | 📋 今日计划 | 任务清单与优先级追踪（P0/P1/P2），支持置顶、备注 |
 | 🌿 习惯打卡 | 每日习惯打卡，自动统计连续天数，每日自动重置 |
 | 📖 阅读打卡 | 书籍阅读进度追踪，支持摘录与想法记录 |
@@ -18,10 +20,14 @@
 
 - **前后端分离** — 前端纯 HTML/CSS/JS，后端 Node.js + Express
 - **数据持久化** — 所有数据存储在 SQLite 数据库中，不依赖浏览器缓存
+- **搜索聚合** — 首页搜索栏支持 6 种搜索引擎一键切换
+- **导航站** — 分组管理常用网站，一键直达
+- **深色模式** — 右下角浮动按钮一键切换深色/浅色主题，自动记忆
 - **头像上传** — 支持头像文件上传，存储在服务器端
 - **一键换肤** — 通过 CSS 变量实现整站主题切换
 - **番茄钟** — 内置 25 分钟专注计时器
 - **本周趋势** — 状态趋势折线图可视化
+- **Bento Grid 布局** — 便当盒式仪表盘，高信息密度且不杂乱
 - **Docker 部署** — 一条命令启动前后端全部服务
 
 ---
@@ -56,9 +62,74 @@ PORT=3000 docker compose up -d --build
 # 访问 http://localhost:3000
 ```
 
-### 查看日志
+### docker-compose.yml 完整配置
+
+以下为项目根目录的 `docker-compose.yml` 完整内容，可直接复制使用：
+
+```yaml
+version: "3.8"
+
+services:
+  # 后端 API 服务
+  backend:
+    build: ./server
+    container_name: workbench-backend
+    restart: unless-stopped
+    volumes:
+      # 数据持久化：SQLite 数据库和上传的头像
+      - workbench-data:/app/data
+    environment:
+      - PORT=3001
+      - DB_PATH=/app/data/workbench.db
+      - UPLOAD_DIR=/app/data/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - workbench-net
+
+  # 前端 Nginx 服务
+  frontend:
+    build: .
+    container_name: workbench-frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    volumes:
+      # 挂载文件方便热更新
+      - ./workbench-desktop.html:/usr/share/nginx/html/index.html:ro
+      - ./assets:/usr/share/nginx/html/assets:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - workbench-net
+
+volumes:
+  workbench-data:
+    driver: local
+
+networks:
+  workbench-net:
+    driver: bridge
+```
+
+### Docker Compose 常用命令
 
 ```bash
+# 构建并启动（后台运行）
+docker compose up -d --build
+
 # 查看所有服务日志
 docker compose logs -f
 
@@ -67,21 +138,23 @@ docker compose logs -f backend
 
 # 只看前端日志
 docker compose logs -f frontend
-```
 
-### 停止与清理
-
-```bash
 # 停止服务（数据保留）
 docker compose down
 
 # 停止并删除数据卷（⚠️ 清空所有数据）
 docker compose down -v
+
+# 重新构建镜像
+docker compose build --no-cache
+
+# 查看服务状态
+docker compose ps
 ```
 
-### 数据备份
+### 数据备份与恢复
 
-数据存储在 Docker 数据卷 `workbench-data` 中，备份方法：
+数据存储在 Docker 数据卷 `workbench-data` 中：
 
 ```bash
 # 备份数据库
@@ -123,7 +196,8 @@ python3 -m http.server 8080
 ```
 浏览器 ──→ Nginx (:8080)
               ├── 静态文件 (HTML/CSS/JS/图片)
-              └── /api/* 反向代理 ──→ Node.js Express (:3001)
+              ├── /api/* 反向代理 ──→ Node.js Express (:3001)
+              └── /uploads/* 代理 ──→ 头像文件
                                         └── SQLite 数据库
 ```
 
@@ -181,6 +255,21 @@ personal-workbench/
 const CONFIG = {
   owner: "我的工作台",
   slogan: "Personal Workbench",
+
+  // 搜索引擎
+  searchEngines: [
+    { key:"google", name:"Google", url:"https://www.google.com/search?q=", icon:"🔍" },
+    // 添加更多引擎...
+  ],
+
+  // 导航链接
+  navLinks: [
+    { group:"常用工具", items:[
+      { name:"GitHub", url:"https://github.com", icon:"🐙", desc:"代码托管" },
+      // 添加更多链接...
+    ]},
+  ],
+
   modules: [
     // 添加/删除/修改模块...
   ],
@@ -200,7 +289,7 @@ const CONFIG = {
 }
 ```
 
-预设色板：墨色中性（默认）、莫兰迪暖粉、冷色科技。
+预设色板：墨色中性（默认）、莫兰迪暖粉、冷色科技、深色模式。
 
 ---
 
