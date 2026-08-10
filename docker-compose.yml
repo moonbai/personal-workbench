@@ -53,12 +53,12 @@ services:
       # 对外端口，默认 8080，可通过 .env 或环境变量 PORT 自定义
       - "${PORT:-8080}:80"
     volumes:
-      # 只读挂载，防止容器内篡改文件
-      # 自适应版（默认首页）+ 桌面版 + 手机版 均保留
-      - ./workbench.html:/usr/share/nginx/html/index.html:ro
-      - ./workbench-desktop.html:/usr/share/nginx/html/desktop.html:ro
-      - ./workbench-mobile.html:/usr/share/nginx/html/mobile.html:ro
-      - ./assets:/usr/share/nginx/html/assets:ro
+      # 挂载整个 www/ 目录，后续往里放文件即可直接访问
+      # 访问 / → www/index.html（自适应版）
+      # 访问 /desktop.html → www/desktop.html（桌面版）
+      # 访问 /mobile.html → www/mobile.html（手机版）
+      # 访问 /xxx.html → www/xxx.html（自定义页面）
+      - ./www:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       backend:

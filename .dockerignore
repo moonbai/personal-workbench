@@ -13,3 +13,9 @@ docker-compose.prod.yml
 LICENSE
 deploy.sh
 SKILL.md
+
+# 根目录的独立 HTML 文件已复制到 www/ 目录，构建时不需要
+workbench.html
+workbench-desktop.html
+workbench-mobile.html
+assets/

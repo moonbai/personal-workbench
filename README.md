@@ -141,12 +141,8 @@ services:
     ports:
       - "${PORT:-8080}:80"
     volumes:
-      # 只读挂载，防止容器内篡改
-      # 自适应版（默认首页）+ 桌面版 + 手机版 均保留
-      - ./workbench.html:/usr/share/nginx/html/index.html:ro
-      - ./workbench-desktop.html:/usr/share/nginx/html/desktop.html:ro
-      - ./workbench-mobile.html:/usr/share/nginx/html/mobile.html:ro
-      - ./assets:/usr/share/nginx/html/assets:ro
+      # 挂载整个 www/ 目录，后续往里放文件即可直接访问
+      - ./www:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       backend:
@@ -209,7 +205,7 @@ docker compose ps
 
 ### 部署提示
 
-- **前端热更新**：直接修改宿主机的 `workbench.html` / `assets/` / `nginx.conf`，无需重建容器，Nginx 自动生效
+- **前端热更新**：直接修改宿主机 `www/` 目录内的文件，Nginx 自动生效，无需重建容器
 - **后端代码修改**：必须执行 `docker compose up -d --build` 重新构建镜像
 - **外网部署**：服务器放行 8080 端口（或自定义端口），通过 `IP:8080` 访问
 - **资源限制**：后端限制 0.5 CPU / 512M，前端限制 0.3 CPU / 256M，可根据宿主机配置调整
@@ -337,12 +333,16 @@ npm start
 ### 启动前端
 
 ```bash
-# 在项目根目录另开终端
+# 方式一：进入 www 目录启动（推荐，与 Docker 环境一致）
+cd www
 python3 -m http.server 8080
-# 前端运行在 http://localhost:8080
 # 访问 / → 自适应版（推荐）
 # 访问 /desktop.html → 桌面版
 # 访问 /mobile.html → 手机版
+
+# 方式二：在项目根目录启动
+python3 -m http.server 8080
+# 访问 /workbench.html → 自适应版
 ```
 
 前端会自动检测后端地址：Docker 环境走 nginx 代理，本地开发自动连接 `localhost:3001`。
@@ -383,12 +383,16 @@ python3 -m http.server 8080
 
 ```
 personal-workbench/
-├── workbench.html             # 自适应版（默认首页，桌面/手机自动切换）
-├── workbench-desktop.html     # 桌面版（独立保留）
-├── workbench-mobile.html      # 手机版（独立保留）
-├── assets/
-│   ├── greet-banner.jpg       # 首页 Hero 背景图
-│   └── avatar.jpg             # 默认头像
+├── www/                       # 前端静态文件目录（挂载到 Nginx）
+│   ├── index.html             # 自适应版（默认首页）
+│   ├── desktop.html           # 桌面版
+│   ├── mobile.html            # 手机版
+│   └── assets/                # 静态资源
+│       ├── greet-banner.jpg   # 首页 Hero 背景图
+│       └── avatar.jpg         # 默认头像
+├── workbench.html             # 自适应版源文件（同步到 www/index.html）
+├── workbench-desktop.html     # 桌面版源文件（同步到 www/desktop.html）
+├── workbench-mobile.html      # 手机版源文件（同步到 www/mobile.html）
 ├── server/                    # 后端服务
 │   ├── index.js               # Express API 服务
 │   ├── package.json           # 依赖配置
@@ -411,6 +415,25 @@ personal-workbench/
 ├── LICENSE
 └── README.md
 ```
+
+### 添加自定义页面
+
+`www/` 目录挂载为 Nginx 静态文件根目录，往里面放文件即可通过 URL 直接访问：
+
+```bash
+# 例如添加一个 about.html
+echo '<h1>About</h1>' > www/about.html
+
+# 直接访问 http://localhost:8080/about.html
+
+# 也可以添加子目录
+mkdir -p www/docs
+echo '<h1>Docs</h1>' > www/docs/guide.html
+
+# 访问 http://localhost:8080/docs/guide.html
+```
+
+> Docker 环境下 `www/` 是只读挂载（`:ro`），文件修改后 Nginx 自动生效，无需重启容器。
 
 ---
 

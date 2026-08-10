@@ -20,11 +20,9 @@ RUN rm -rf /usr/share/nginx/html/*
 # 复制自定义 nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 复制工作台文件（自适应版作为默认首页）
-COPY workbench.html /usr/share/nginx/html/index.html
-COPY workbench-desktop.html /usr/share/nginx/html/desktop.html
-COPY workbench-mobile.html /usr/share/nginx/html/mobile.html
-COPY assets/ /usr/share/nginx/html/assets/
+# 复制整个 www/ 目录到 Nginx 静态文件根目录
+# 后续往 www/ 放文件即可通过 URL 直接访问
+COPY www/ /usr/share/nginx/html/
 
 # 暴露端口
 EXPOSE 80
