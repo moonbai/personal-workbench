@@ -15,7 +15,6 @@ services:
     build: ./server
     container_name: workbench-backend
     restart: unless-stopped
-    # 资源限制：防止突发占用挤占宿主机
     deploy:
       resources:
         limits:
@@ -29,13 +28,11 @@ services:
       - DB_PATH=/app/data/workbench.db
       - UPLOAD_DIR=/app/data/uploads
     healthcheck:
-      # curl -f 在 HTTP 4xx/5xx 时返回非零退出码，兼容性优于 wget
       test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/api/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 6
       start_period: 15s
-    # 日志滚动：防止长期运行日志占满磁盘
     logging:
       driver: "json-file"
       options:
@@ -61,13 +58,14 @@ services:
       - ./www:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
+      # 不死等健康检查 — 前端先启动，Nginx 代理会自动重试后端连接
       backend:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 6
       start_period: 5s
     deploy:
       resources:

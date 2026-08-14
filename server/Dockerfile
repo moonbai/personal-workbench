@@ -31,8 +31,8 @@ LABEL org.opencontainers.image.description="个人工作台后端 - Node.js + Ex
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/moonbai/personal-workbench"
 
-# 安装 curl 用于健康检查
-RUN apk add --no-cache curl
+# 安装 curl（健康检查）和 su-exec（权限降级）
+RUN apk add --no-cache curl su-exec
 
 WORKDIR /app
 
@@ -46,23 +46,22 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
 COPY . .
 
+# 复制 entrypoint 脚本并设置权限
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # 创建数据持久化目录并设置权限
-# 关键：先创建目录并设置属主，再声明 VOLUME
-# 这样 Docker 匿名卷挂载时继承目录的属主和权限
 RUN mkdir -p /app/data/uploads && \
     chown -R workbench:workbench /app
 
-# 切换为非 root 用户
-USER workbench
-
-# 数据持久化目录（挂载后 workbench 用户仍可读写）
+# 数据持久化目录
 VOLUME ["/app/data"]
 
 EXPOSE 3001
 
 # 健康检查 — curl -f 在 HTTP 错误时返回非零退出码
-# start_period 给 better-sqlite3 初始化留足时间
-HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=6 \
   CMD curl -f http://127.0.0.1:3001/api/health || exit 1
 
-CMD ["node", "index.js"]
+# 使用 entrypoint 脚本：以 root 启动修复权限，再降级为 workbench 用户
+ENTRYPOINT ["docker-entrypoint.sh"]

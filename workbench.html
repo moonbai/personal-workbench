@@ -87,7 +87,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--page-bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.5;
-    -webkit-font-smoothing: antialiased; min-height: 100vh; min-width: 1000px;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
   }
   body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background-image: var(--page-texture); background-size: cover; background-position: center; opacity:.5; }
@@ -782,11 +782,91 @@
   @media (min-width: 769px) and (max-width: 1024px) {
     .bento { grid-template-columns: repeat(2, 1fr) !important; }
     :root { --sidebar-w: 220px; }
+    .main { padding: 20px 24px 30px; }
+    .main > #screen { max-width: 100%; }
+  }
+  @media (min-width: 1025px) and (max-width: 1280px) {
+    .bento { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+
+  /* ============================================================
+     加载动画 / 连接状态 / Toast 通知
+     ============================================================ */
+  /* 页面加载遮罩 */
+  .app-loader {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--page-bg); gap: 16px;
+    transition: opacity .4s; 
+  }
+  .app-loader.hidden { opacity: 0; pointer-events: none; }
+  .app-loader .spin {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  .app-loader .txt { font-size: 13px; color: var(--text-secondary); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 连接状态指示器 */
+  .conn-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 600; padding: 3px 8px;
+    border-radius: 20px; transition: all .25s;
+  }
+  .conn-badge.ok { background: rgba(111,143,106,.12); color: var(--module-1); }
+  .conn-badge.err { background: rgba(194,93,79,.12); color: var(--danger); }
+  .conn-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .conn-badge.ok .dot { background: var(--module-1); }
+  .conn-badge.err .dot { background: var(--danger); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  /* Toast 通知 */
+  .toast-wrap {
+    position: fixed; top: 20px; right: 20px; z-index: 9000;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--radius-tile);
+    background: var(--surface-card); box-shadow: var(--shadow-overlay);
+    font-size: 13px; font-weight: 500; max-width: 360px;
+    border-left: 3px solid var(--accent);
+    pointer-events: auto;
+    animation: toastIn .3s cubic-bezier(.2,.8,.25,1);
+  }
+  .toast.err { border-left-color: var(--danger); }
+  .toast.ok { border-left-color: var(--module-1); }
+  .toast.warn { border-left-color: var(--module-3); }
+  .toast.fade { animation: toastOut .3s forwards; }
+  @keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { to { transform: translateX(120%); opacity: 0; } }
+  @media (max-width: 768px) {
+    .toast-wrap { top: 8px; right: 8px; left: 8px; }
+    .toast { max-width: 100%; }
+  }
+
+  /* 平滑滚动 */
+  html { scroll-behavior: smooth; }
+  /* 选中文本颜色 */
+  ::selection { background: var(--accent); color: var(--on-accent); }
+  /* 焦点可见性 */
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  /* 减少动画偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 
 </style>
 </head>
 <body>
+<!-- 加载遮罩 -->
+<div class="app-loader" id="appLoader"><div class="spin"></div><div class="txt">正在加载工作台...</div></div>
+<!-- Toast 通知容器 -->
+<div class="toast-wrap" id="toastWrap"></div>
 <div class="layout">
   <!-- 移动端汉堡按钮 -->
   <button class="menu-toggle" id="menuToggle" aria-label="打开菜单"></button>
@@ -801,9 +881,9 @@
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="foot" id="foot" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <span>数据持久化存储</span>
+      <span class="conn-badge err" id="connBadge"><span class="dot"></span>连接中...</span>
       <span style="opacity:.5">·</span>
-      <span style="cursor:pointer;text-decoration:underline" onclick="window._openCmd&&window._openCmd()">Ctrl+K 命令面板</span>
+      <span style="cursor:pointer;text-decoration:underline" onclick="window._openCmd&&window._openCmd()">Ctrl+K</span>
     </div>
   </aside>
   <!-- main -->
@@ -990,28 +1070,69 @@ const $ = s => document.querySelector(s);
    API STORE — 数据存储在后端 SQLite，不再用 localStorage
    ============================================================ */
 let API_BASE = '';  // Docker/nginx 下走相对路径，本地开发自动切换到 3001
+let apiOnline = false;  // 后端连接状态
 
-async function detectApiBase(){
+// 兼容性：AbortSignal.timeout 在旧浏览器中不存在，使用手动 abort
+function fetchWithTimeout(url, opts = {}, ms = 2000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(tid));
+}
+
+async function detectApiBase(retries = 3){
   // 先试相对路径（Docker nginx 代理）
-  try {
-    const r = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
-    if(r.ok) return '';
-  } catch(e){}
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetchWithTimeout('/api/health', {}, 1500);
+      if (r.ok) { apiOnline = true; return ''; }
+    } catch(e) { /* 等待重试 */ }
+    if (i < retries - 1) await new Promise(r => setTimeout(r, 800));
+  }
   // 回退到本地 3001 端口（开发模式）
   try {
-    const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1500) });
-    if(r.ok) return 'http://localhost:3001';
+    const r = await fetchWithTimeout('http://localhost:3001/api/health', {}, 1500);
+    if (r.ok) { apiOnline = true; return 'http://localhost:3001'; }
   } catch(e){}
+  apiOnline = false;
   return '';
+}
+
+// Toast 通知
+function toast(msg, type = '') {
+  const wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = `<span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.classList.add('fade'); setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// 更新连接状态指示器
+function updateConnStatus() {
+  const badge = document.getElementById('connBadge');
+  if (!badge) return;
+  if (apiOnline) {
+    badge.className = 'conn-badge ok';
+    badge.innerHTML = '<span class="dot"></span>已连接';
+  } else {
+    badge.className = 'conn-badge err';
+    badge.innerHTML = '<span class="dot"></span>离线模式';
+  }
 }
 
 const store = {
   async load(){
     API_BASE = await detectApiBase();
+    updateConnStatus();
+    if (!apiOnline) {
+      toast('后端未连接，使用本地种子数据', 'warn');
+    }
     try {
-      const res = await fetch(`${API_BASE}/api/data`);
+      const res = await fetchWithTimeout(`${API_BASE}/api/data`, {}, 5000);
       const json = await res.json();
       if(json.ok && json.data && Object.keys(json.data).length > 0){
+        if (apiOnline) toast('数据加载成功', 'ok');
         return json.data;
       }
     } catch(e){ console.warn('[Store] 从后端加载失败，使用种子数据', e); }
@@ -1021,20 +1142,23 @@ const store = {
   save(){
     if(this._timer) clearTimeout(this._timer);
     this._timer = setTimeout(() => {
-      fetch(`${API_BASE}/api/data`, {
+      fetchWithTimeout(`${API_BASE}/api/data`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data }),
-      }).catch(e => console.warn('[Store] 保存失败', e));
+      }, 5000).catch(e => {
+        console.warn('[Store] 保存失败', e);
+        toast('数据保存失败，请检查后端连接', 'err');
+      });
     }, 300);
   },
   saveNow(){
     if(this._timer){ clearTimeout(this._timer); this._timer = null; }
-    return fetch(`${API_BASE}/api/data`, {
+    return fetchWithTimeout(`${API_BASE}/api/data`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data }),
-    }).catch(e => console.warn('[Store] 保存失败', e));
+    }, 5000).catch(e => console.warn('[Store] 保存失败', e));
   },
 };
 let data = {};
@@ -2204,14 +2328,15 @@ $("#avatarInput").onchange = async e => {
   try {
     const fd = new FormData();
     fd.append('avatar', f);
-    const res = await fetch(`${API_BASE}/api/avatar`, { method: 'POST', body: fd });
+    const res = await fetchWithTimeout(`${API_BASE}/api/avatar`, { method: 'POST', body: fd }, 10000);
     const json = await res.json();
     if(json.ok){
       data.__avatar = API_BASE + json.url;
       $("#avaImg").src = data.__avatar;
       store.save();
+      toast('头像更新成功', 'ok');
     }
-  } catch(err){ console.warn('[Avatar] 上传失败', err); }
+  } catch(err){ console.warn('[Avatar] 上传失败', err); toast('头像上传失败', 'err'); }
   e.target.value = "";
 };
 
@@ -2224,14 +2349,23 @@ buildNav();
 
 /* ---------- 异步初始化：从后端加载数据后再渲染 ---------- */
 (async () => {
-  data = await store.load();
-  _booted = true;
-  if(data.__avatar) $("#avaImg").src = data.__avatar;
-  initThemeToggle();
-  initCommandPalette();
-  initKeyboardShortcuts();
-  render();
-  startClock();
+  try {
+    data = await store.load();
+    _booted = true;
+    if(data.__avatar) $("#avaImg").src = data.__avatar;
+    initThemeToggle();
+    initCommandPalette();
+    initKeyboardShortcuts();
+    render();
+    startClock();
+  } catch(e) {
+    console.error('[Init] 初始化失败:', e);
+    toast('初始化失败，请刷新重试', 'err');
+  } finally {
+    // 隐藏加载遮罩
+    const loader = document.getElementById('appLoader');
+    if (loader) { loader.classList.add('hidden'); setTimeout(() => loader.remove(), 500); }
+  }
 })();
 
 /* ============================================================

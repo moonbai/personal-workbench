@@ -33,7 +33,7 @@ services:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/api/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 6
       start_period: 15s
     logging:
       driver: "json-file"
@@ -52,13 +52,14 @@ services:
       # 对外端口，默认 8080，可通过 .env 或环境变量 PORT 自定义
       - "${PORT:-8080}:80"
     depends_on:
+      # 不死等健康检查 — 前端先启动，Nginx 代理会自动重试后端连接
       backend:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 6
       start_period: 5s
     deploy:
       resources:
